@@ -1,0 +1,96 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Who am I?</title>
+<style>
+  body { background: #111; color: #eee; font: 16px/1.5 ui-monospace, Menlo, monospace; padding: 24px; }
+  b { color: #f5b301; }
+  #id { font-size: 22px; margin-top: 16px; }
+</style>
+</head>
+<body>
+<pre id="out">Collecting…</pre>
+<div id="id"></div>
+<script>
+async function sha256(text) {
+  const bytes = new TextEncoder().encode(text);
+  const hash = await crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(hash)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// 1. Canvas: draw the same things, read back the pixels
+async function canvasHash() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 240; canvas.height = 60;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#f60';
+  ctx.fillRect(100, 1, 62, 20);
+  ctx.fillStyle = '#069';
+  ctx.font = '14px Arial';
+  ctx.fillText('Hello, fingerprint! 😃', 2, 15);
+  ctx.beginPath();
+  ctx.arc(200, 40, 15, 0, Math.PI * 2);
+  ctx.stroke();
+  return sha256(canvas.toDataURL());
+}
+
+// 2. WebGL: ask the GPU driver for its name
+function webgl() {
+  const gl = document.createElement('canvas').getContext('webgl');
+  if (!gl) return 'no webgl';
+  const info = gl.getExtension('WEBGL_debug_renderer_info');
+  if (!info) return 'debug info blocked';
+  return gl.getParameter(info.UNMASKED_VENDOR_WEBGL) + ' / ' +
+         gl.getParameter(info.UNMASKED_RENDERER_WEBGL);
+}
+
+// 3. Audio: render a tone through a compressor, add up the samples
+async function audio() {
+  const ac = new OfflineAudioContext(1, 5000, 44100);
+  const osc = ac.createOscillator();
+  osc.type = 'triangle';
+  osc.frequency.value = 10000;
+  const comp = ac.createDynamicsCompressor();
+  osc.connect(comp);
+  comp.connect(ac.destination);
+  osc.start(0);
+  const buffer = await ac.startRendering();
+  let sum = 0;
+  for (const s of buffer.getChannelData(0).slice(4500)) sum += Math.abs(s);
+  return sum.toString();
+}
+
+// 4. Fonts: a font is installed if text in it is a different width than the fallback
+function fonts() {
+  const list = ['Arial', 'Helvetica Neue', 'Times New Roman', 'Courier New', 'Georgia',
+    'Verdana', 'Tahoma', 'Trebuchet MS', 'Comic Sans MS', 'Impact', 'Menlo', 'Monaco',
+    'Segoe UI', 'Roboto', 'Ubuntu', 'Calibri', 'SF Pro Display'];
+  const ctx = document.createElement('canvas').getContext('2d');
+  const width = font => { ctx.font = `72px ${font}`; return ctx.measureText('mmmmmmmmmmlli').width; };
+  return list.filter(f => ['monospace', 'serif', 'sans-serif']
+    .some(base => width(`'${f}', ${base}`) !== width(base)));
+}
+
+async function main() {
+  const signals = {
+    canvas: await canvasHash(),
+    webgl: webgl(),
+    audio: await audio(),
+    screen: `${screen.width}x${screen.height} @${devicePixelRatio}x`,
+    cpuCores: navigator.hardwareConcurrency,
+    memoryGB: navigator.deviceMemory ?? 'n/a',
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    languages: navigator.languages.join(', '),
+    fonts: fonts().join(', '),
+  };
+  const id = await sha256(JSON.stringify(signals));
+  document.getElementById('out').textContent =
+    Object.entries(signals).map(([k, v]) => `${k.padEnd(10)} ${v}`).join('\n');
+  document.getElementById('id').innerHTML = `<b>Your ID:</b> ${id}`;
+  console.log(JSON.stringify({ ...signals, id }));
+}
+main();
+</script>
+</body>
+</html>
