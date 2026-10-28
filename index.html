@@ -1,0 +1,140 @@
+<!doctype html> 
+<html> 
+<head> 
+<meta charset="utf-8"> 
+<title>SYS_RECON: WHOAMI</title> 
+<style> 
+body { background: #000; color: #00ff66; font: 14px/1.6 ui-monospace, Menlo, Monaco, Consolas, monospace; padding: 30px; text-shadow: 0 0 5px rgba(0, 255, 102, 0.5); overflow: hidden; } 
+b { color: #ff3366; text-shadow: 0 0 5px rgba(255, 51, 102, 0.5); } 
+#id { font-size: 18px; margin-top: 24px; padding: 12px; border: 1px dashed #00ff66; background: #000; display: inline-block; } 
+#matrix-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; } 
+pre { margin: 0; white-space: pre-wrap; background: #000; display: inline-block; padding: 4px 8px; } 
+.accent { color: #00ffff; text-shadow: 0 0 5px rgba(0, 255, 255, 0.5); } 
+</style> 
+</head> 
+<body> 
+<canvas id="matrix-canvas"></canvas> 
+<script> 
+const canvas = document.getElementById('matrix-canvas'); 
+const ctx = canvas.getContext('2d'); 
+const letters = 'ｦｱｳｴｵｶｷｹｺｻｼｽｾｿﾀﾂﾃﾅﾆﾇﾈﾊﾋﾎﾏﾐﾑﾒﾓﾔﾕﾗﾘﾜ012345789Z:."=*+-<>¦'; 
+const fontSize = 14; 
+let columns; 
+let drops; 
+
+function resizeCanvas() { 
+    canvas.width = window.innerWidth; 
+    canvas.height = window.innerHeight; 
+    columns = Math.floor(canvas.width / fontSize); 
+    // FIXED: Removed quotes around canvas.height expression
+    drops = Array(columns).fill(0).map(() => Math.floor(Math.random() * -canvas.height / fontSize)); 
+} 
+resizeCanvas(); 
+window.addEventListener('resize', resizeCanvas); 
+
+function drawMatrix() { 
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.06)'; 
+    ctx.fillRect(0, 0, canvas.width, canvas.height); 
+    ctx.font = 'bold ' + fontSize + 'px monospace'; 
+    for (let i = 0; i < drops.length; i++) { 
+        const text = letters.charAt(Math.floor(Math.random() * letters.length)); 
+        const x = i * fontSize; 
+        const y = drops[i] * fontSize; 
+        if (y > 0) { 
+            ctx.save(); 
+            ctx.translate(x + fontSize / 2, y - fontSize / 2); 
+            ctx.scale(-1, 1); 
+            if (Math.random() > 0.98) { 
+                ctx.fillStyle = '#ffffff'; 
+                ctx.shadowColor = '#33ff66'; 
+                ctx.shadowBlur = 8; 
+            } else { 
+                ctx.fillStyle = '#33ff66'; 
+                ctx.shadowBlur = 0; 
+            } 
+            // FIXED: Removed quotes around fontSize expression
+            ctx.fillText(text, -fontSize / 2, fontSize / 2); 
+            ctx.restore(); 
+        } 
+        if (y > canvas.height && Math.random() > 0.975) { 
+            drops[i] = 0; 
+        } 
+        drops[i]++; 
+    } 
+} 
+setInterval(drawMatrix, 33); 
+</script> 
+
+<pre id="out"> 
+[!] INITIALIZING RECONNAISSANCE PROTOCOL... 
+[-] HARVESTING BROWSER HARDWARE SIGNALS... 
+</pre> 
+<div id="id"></div> 
+
+<script> 
+async function sha256(text) { 
+    const bytes = new TextEncoder().encode(text); 
+    const hash = await crypto.subtle.digest('SHA-256', bytes); 
+    return [...new Uint8Array(hash)].map(b => b.toString(16).padStart(2, '0')).join(''); 
+} 
+async function canvasHash() { 
+    const canvas = document.createElement('canvas'); 
+    canvas.width = 240; canvas.height = 60; 
+    const ctx = canvas.getContext('2d'); 
+    ctx.fillStyle = '#f60'; ctx.fillRect(100, 1, 62, 20); 
+    ctx.fillStyle = '#069'; ctx.font = '14px Arial'; 
+    ctx.fillText('Hello, fingerprint! 😃', 2, 15); 
+    ctx.beginPath(); ctx.arc(200, 40, 15, 0, Math.PI * 2); 
+    ctx.stroke(); 
+    return sha256(canvas.toDataURL()); 
+} 
+function webgl() { 
+    const gl = document.createElement('canvas').getContext('webgl'); 
+    if (!gl) return 'no webgl'; 
+    const info = gl.getExtension('WEBGL_debug_renderer_info'); 
+    if (!info) return 'debug info blocked'; 
+    return gl.getParameter(info.UNMASKED_VENDOR_WEBGL) + ' / ' + gl.getParameter(info.UNMASKED_RENDERER_WEBGL); 
+} 
+async function audio() { 
+    const ac = new OfflineAudioContext(1, 5000, 44100); 
+    const osc = ac.createOscillator(); 
+    osc.type = 'triangle'; osc.frequency.value = 10000; 
+    const comp = ac.createDynamicsCompressor(); 
+    osc.connect(comp); comp.connect(ac.destination); 
+    osc.start(0); 
+    const buffer = await ac.startRendering(); 
+    let sum = 0; 
+    for (const s of buffer.getChannelData(0).slice(4500)) sum += Math.abs(s); 
+    return sum.toString(); 
+} 
+function fonts() { 
+    const list = ['Arial', 'Helvetica Neue', 'Times New Roman', 'Courier New', 'Georgia', 'Verdana', 'Tahoma', 'Trebuchet MS', 'Comic Sans MS', 'Impact', 'Menlo', 'Monaco', 'Segoe UI', 'Roboto', 'Ubuntu', 'Calibri', 'SF Pro Display']; 
+    const ctx = document.createElement('canvas').getContext('2d'); 
+    const width = font => { ctx.font = `72px ${font}`; return ctx.measureText('mmmmmmmmmmlli').width; }; 
+    return list.filter(f => ['monospace', 'serif', 'sans-serif'].some(base => width(`'${f}', ${base}`) !== width(base))); 
+} 
+async function main() { 
+    const signals = { 
+        canvas: await canvasHash(), 
+        webgl: webgl(), 
+        audio: await audio(), 
+        // FIXED: Replaced string literal with template literal backticks so the object expands properly
+        screen: `window.screen.widthx{window.screen.height} @${window.devicePixelRatio}x`, 
+        cpuCores: navigator.hardwareConcurrency, 
+        memoryGB: navigator.deviceMemory ?? 'n/a', 
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, 
+        languages: navigator.languages.join(', '), 
+        fonts: fonts().join(', '), 
+    }; 
+    const id = await sha256(JSON.stringify(signals)); 
+    let outputText = "[+] TELEMETRY EXTRACTION COMPLETE\n"; 
+    outputText += "==================================================\n"; 
+    outputText += Object.entries(signals).map(([k, v]) => `[#] ${k.toUpperCase().padEnd(12)} :: ${v}`).join('\n'); 
+    document.getElementById('out').innerHTML = outputText.replace(/# (\w+)/g, '# <span class="accent">$1</span>'); 
+    document.getElementById('id').innerHTML = `<b>[TARGET_UUID]</b> ${id}`; 
+    console.log(JSON.stringify({ ...signals, id })); 
+} 
+setTimeout(main, 900); 
+</script> 
+</body> 
+</html>
